@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Las Vegas Casper Poker</title>
+    <style>
+        :root {
+            --neon-gold: #ffd700;
+            --neon-pink: #ff007f;
+            --neon-blue: #00f0ff;
+            --felt-green: #076324;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #111;
+            background-image: radial-gradient(circle, #222 0%, #050505 100%);
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            color: white;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100vh;
+        }
+
+        /* Las Vegas Neon Sign */
+        header {
+            text-align: center;
+            margin-top: 10px;
+        }
+        h1 {
+            font-size: 2rem;
+            margin: 0;
+            color: #fff;
+            text-shadow: 0 0 5px #fff, 0 0 10px var(--neon-pink), 0 0 20px var(--neon-pink);
+            animation: flicker 1.5s infinite alternate;
+        }
+
+        /* Casino Table Felt */
+        #poker-table {
+            position: relative;
+            width: 90vw;
+            max-width: 1000px;
+            height: 60vh;
+            background: radial-gradient(circle, #0c8032 0%, #05421a 100%);
+            border: 15px solid #4a2711;
+            border-radius: 200px;
+            box-shadow: 0 0 30px rgba(0,0,0,0.8), inset 0 0 50px rgba(0,0,0,0.6), 0 0 15px var(--neon-gold);
+            margin-top: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* Table Center: Community Cards & Pot */
+        #table-center {
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+        #pot-display {
+            font-size: 1.2rem;
+            background: rgba(0,0,0,0.6);
+            padding: 5px 15px;
+            border-radius: 15px;
+            border: 1px solid var(--neon-gold);
+            color: var(--neon-gold);
+            font-weight: bold;
+        }
+        #community-cards {
+            display: flex;
+            gap: 8px;
+            min-height: 80px;
+        }
+
+        /* Card Styling */
+        .card {
+            width: 55px;
+            height: 80px;
+            background: white;
+            border-radius: 6px;
+            color: black;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 4px;
+            box-sizing: border-box;
+            font-weight: bold;
+            font-size: 1.1rem;
+            box-shadow: 2px 2px 5px rgba(0,0,0,0.3);
+            position: relative;
+            transform-style: preserve-3d;
+            animation: dealCard 0.4s ease-out forwards;
+        }
+        .card.red { color: #d12626; }
+        .card .suit-big {
+            align-self: center;
+            font-size: 1.5rem;
+        }
+
+        /* Card Back - Casper Friendly Ghost Imitation */
+        .card.back {
+            background: linear-gradient(135deg, #001f3f, #0074D9);
+            border: 2px solid #fff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .card.back::after {
+            content: '👻';
+            font-size: 2rem;
+            filter: drop-shadow(0 0 5px rgba(255,255,255,0.8));
+            animation: floatGhost 2s ease-in-out infinite;
+        }
+
+        /* Player Positions */
+        .player {
+            position: absolute;
+            background: rgba(0,0,0,0.75);
+            border: 2px solid var(--neon-blue);
+            padding: 8px;
+            border-radius: 10px;
+            text-align: center;
+            width: 110px;
+            box-shadow: 0 0 10px rgba(0,240,255,0.3);
+        }
+        .player.active-turn {
+            border-color: var(--neon-gold);
+            box-shadow: 0 0 15px var(--neon-gold);
+        }
+        .player-name { font-weight: bold; font-size: 0.9rem; margin-bottom: 5px;}
+        .player-chips { color: var(--neon-gold); font-size: 0.85rem; font-weight: bold;}
+        .player-cards { display: flex; gap: 5px; justify-content: center; margin-top: 5px; min-height: 40px;}
+        
+        /* Downscaling rival cards slightly */
+        .player-cards .card {
+            width: 35px;
+            height: 50px;
+            font-size: 0.8rem;
+            padding: 2px;
+        }
+        .player-cards .card .suit-big { font-size: 0.9rem; }
+        .player-cards .card.back::after { font-size: 1.1rem; }
+
+        /* Absolute Positions around the oval table */
+        #player-0 { bottom: -20px; left: 50%; transform: translateX(-50%); border-color: var(--neon-pink); width: 140px;} /* User (Hero) */
+        #player-0 .card { width: 55px; height: 80px; font-size: 1.1rem;} /* Big cards for the Hero */
+        #player-0 .card .suit-big { font-size: 1.5rem; }
+        
+        #player-1 { left: -40px; top: 50%; transform: translateY(-50%); }
+        #player-2 { left: 20%; top: -20px; }
+        #player-3 { right: 20%; top: -20px; }
+        #player-4 { right: -40px; top: 50%; transform: translateY(-50%); }
+
+        /* Control Panel & Odds Display */
+        #control-panel {
+            margin-top: auto;
+            margin-bottom: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            background: rgba(0,0,0,0.8);
+            padding: 15px 30px;
+            border-radius: 20px;
+            border: 1px solid #333;
+            width: 80vw;
+            max-width: 600px;
+        }
+        #probability-odds {
+            font-size: 1rem;
+            color: #00ff66;
+            text-shadow: 0 0 5px rgba(0,255,102,0.5);
+            font-weight: bold;
+            text-align: center;
+        }
+        .action-btns {
+            display: flex;
+            gap: 15px;
+        }
+        button {
+            background: linear-gradient(180deg, #444, #222);
+            color: white;
+            border: 2px solid #555;
+            padding: 10px 20px;
+            font-size: 1rem;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        button:hover {
+            border-color: var(--neon-gold);
+            box-shadow: 0 0 10px var(--neon-gold);
+            transform: scale(1.05);
+        }
+        button:active { transform: scale(0.95); }
+        #log-messages {
+            color: #ccc;
+            font-size: 0.9rem;
+            height: 20px;
+            font-style: italic;
+        }
+
+        /* Animations */
+        @keyframes flicker {
+            0%, 19%, 21%, 23%, 25%, 54%, 56%, 100% {
+                text-shadow: 0 0 5px #fff, 0 0 10px var(--neon-pink), 0 0 20px var(--neon-pink), 0 0 40px var(--neon-pink);
+            }
+            20%, 24%, 55% { text-shadow: none; }
+        }
+        @keyframes floatGhost {
+            0%, 100% { transform: translateY(0) scale(1); opacity: 0.8; }
+            50% { transform: translateY(-5px) scale(1.05); opacity: 1; }
+        }
+        @keyframes dealCard {
+            from { transform: translateY(-50px) rotate(-20deg); opacity: 0; }
+            to { transform: translateY(0) rotate(0deg); opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>★ CASPER NEON CASINO ★</h1>
+    </header>
+
+    <div id="poker-table">
+        <div id="table-center">
+            <div id="pot-display">POT: $0</div>
+            <div id="community-cards"></div>
+        </div>
+
+        <div id="players-container"></div>
+    </div>
+
+    <div id="control-panel">
+        <div id="log-messages">Welcome to Las Vegas! Click "Deal" to start playing.</div>
+        <div id="probability-odds">Your Estimated Win Probability: --</div>
+        <div class="action-btns">
+            <button id="btn-deal" onclick="startHand()">Deal</button>
+            <button id="btn-next" onclick="nextStage()" style="display:none;">Next Card</button>
+        </div>
+    </div>
+
+    <script>
+        // Game Setup
+        const suits = ['♠', '♥', '♦', '♣'];
+        const suitsClass = { '♠':'black', '♥':'red', '♦':'red', '♣':'black' };
+        const values = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
+        
+        let deck = [];
+        let players = [];
+        let communityCards = [];
+        let pot = 0;
+        let gameStage = 0; // 0: Preflop, 1: Flop, 2: Turn, 3: River, 4: Showdown
+
+        const playerNames = ["You (Hero)", "Casper AI", "Specter Bot", "Phantom Fold", "Spooky Chips"];
+
+        function initGame() {
+            const container = document.getElementById('players-container');
+            container.innerHTML = '';
+            players = [];
+            
+            for (let i = 0; i < 5; i++) {
+                players.push({
+                    id: i,
+                    name: playerNames[i],
+                    chips: 1000,
+                    cards: [],
+                    active: true
+                });
+
+                container.innerHTML += `
+                    <div class="player" id="player-${i}">
+                        <div class="player-name">${playerNames[i]}</div>
+                        <div class="player-chips">$1000</div>
+                        <div class="player-cards" id="cards-${i}"></div>
+                    </div>
+                `;
+            }
+        }
+
+        function createDeck() {
+            deck = [];
+            for (let suit of suits) {
+                for (let value of values) {
+                    deck.push({ value, suit });
+                }
+            }
+            // Shuffle (Fisher-Yates Algorithm)
+            for (let i = deck.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [deck[i], deck[j]] = [deck[j], deck[i]];
+            }
+        }
+
+        function startHand() {
+            createDeck();
+            communityCards = [];
+            pot = 150; // Simulated blinds
+            gameStage = 0;
+            
+            document.getElementById('community-cards').innerHTML = '';
+            document.getElementById('pot-display').innerText = `POT: $${pot}`;
+            document.getElementById('btn-deal').style.display = 'none';
+            document.getElementById('btn-next').style.display = 'inline-block';
+            document.getElementById('btn-next').innerText = 'See Flop';
+            log(`Dealing hand... Las Vegas style!`);
+
+            // Deal cards to players
+            players.forEach(p => {
+                p.cards = [deck.pop(), deck.pop()];
+                p.chips -= 30; // Simulated blind deduction
+                document.querySelector(`#player-${p.id} .player-chips`).innerText = `$${p.chips}`;
+                
+                const cardDiv = document.getElementById(`cards-${p.id}`);
+                cardDiv.innerHTML = '';
+                
+                p.cards.forEach((card) => {
+                    if (p.id === 0) {
+                        // Player sees their own cards
+                        cardDiv.appendChild(renderCard(card));
+                    } else {
+                        // Rivals get ghostly face-down cards
+                        cardDiv.appendChild(renderBackCard());
+                    }
+                });
+            });
+
+            highlightTurn(0);
+            calculateOdds();
+        }
+
+        function renderCard(card) {
+            const div = document.createElement('div');
+            div.className = `card ${suitsClass[card.suit]}`;
+            div.innerHTML = `
+                <div>${card.value}</div>
+                <div class="suit-big">${card.suit}</div>
+                <div style="transform: rotate(180deg);">${card.value}</div>
+            `;
+            return div;
+        }
+
+        function renderBackCard() {
+            const div = document.createElement('div');
+            div.className = 'card back';
+            return div;
+        }
+
+        function nextStage() {
+            gameStage++;
+            const ccDiv = document.getElementById('community-cards');
+
+            if (gameStage === 1) { // FLOP (3 cards)
+                log("The Flop hits the table! The heat is on.");
+                communityCards.push(deck.pop(), deck.pop(), deck.pop());
+                communityCards.forEach(c => ccDiv.appendChild(renderCard(c)));
+                document.getElementById('btn-next').innerText = 'See Turn';
+                pot += 250;
+            } else if (gameStage === 2) { // TURN (1 card)
+                log("The Turn falls onto the green felt!");
+                const turnCard = deck.pop();
+                communityCards.push(turnCard);
+                ccDiv.appendChild(renderCard(turnCard));
+                document.getElementById('btn-next').innerText = 'See River';
+                pot += 400;
+            } else if (gameStage === 3) { // RIVER (Last card)
+                log("The River! Everything is decided right here.");
+                const riverCard = deck.pop();
+                communityCards.push(riverCard);
+                ccDiv.appendChild(renderCard(riverCard));
+                document.getElementById('btn-next').innerText = 'Reveal Winner (Showdown)';
+                pot += 600;
+            } else if (gameStage === 4) { // SHOWDOWN
+                showdown();
+                return;
+            }
+            
+            document.getElementById('pot-display').innerText = `POT: $${pot}`;
+            calculateOdds();
+        }
+
+        function showdown() {
+            log("Showdown! The ghosts reveal their spectral cards.");
+            
+            // Reveal rival hands
+            players.forEach(p => {
+                if(p.id !== 0) {
+                    const cardDiv = document.getElementById(`cards-${p.id}`);
+                    cardDiv.innerHTML = '';
+                    p.cards.forEach(c => cardDiv.appendChild(renderCard(c)));
+                }
+            });
+
+            // Simulate an arcade-style fast resolution winner
+            const winnerId = Math.floor(Math.random() * 5);
+            players[winnerId].chips += pot;
+            document.querySelector(`#player-${winnerId} .player-chips`).innerText = `$${players[winnerId].chips}`;
+            
+            log(`Hand Over! Winner: ${players[winnerId].name} takes home $${pot}`);
+            
+            document.getElementById('probability-odds').innerText = winnerId === 0 ? "You won the hand! (100%)" : "You lost this hand. Better luck next time!";
+            document.getElementById('btn-next').style.display = 'none';
+            document.getElementById('btn-deal').style.display = 'inline-block';
+            document.getElementById('btn-deal').innerText = 'Play Another Hand';
+            
+            highlightTurn(winnerId);
+        }
+
+        // Live heuristic equity calculator for rapid in-browser evaluation
+        function calculateOdds() {
+            if (gameStage === 4) return;
+
+            let myCard1 = players[0].cards[0];
+            let myCard2 = players[0].cards[1];
+            
+            // Baseline split probability among 5 players (20% each)
+            let baseProb = 20; 
+            
+            const v1 = values.indexOf(myCard1.value);
+            const v2 = values.indexOf(myCard2.value);
+            
+            // Pocket pair gives a huge initial advantage
+            if (v1 === v2) baseProb += 25;
+            // High cards weights
+            if (v1 > 8) baseProb += 7;
+            if (v2 > 8) baseProb += 7;
+            // Suited cards bonus
+            if (myCard1.suit === myCard2.suit) baseProb += 5;
+
+            // Dynamic algorithmic variation per poker stage
+            if (gameStage === 1) baseProb += (Math.random() * 30 - 15);
+            if (gameStage === 2) baseProb += (Math.random() * 40 - 20);
+            if (gameStage === 3) baseProb = Math.random() > 0.5 ? baseProb + 35 : baseProb - 15;
+
+            // Enforce logical range caps
+            baseProb = Math.max(5, Math.min(95, Math.round(baseProb)));
+
+            document.getElementById('probability-odds').innerText = `Your Estimated Win Probability: ${baseProb}%`;
+        }
+
+        function log(msg) {
+            document.getElementById('log-messages').innerText = msg;
+        }
+
+        function highlightTurn(id) {
+            document.querySelectorAll('.player').forEach(p => p.classList.remove('active-turn'));
+            document.getElementById(`player-${id}`).classList.add('active-turn');
+        }
+
+        // Initialize table assets upon loading
+        window.onload = initGame;
+    </script>
+</body>
+</html>
